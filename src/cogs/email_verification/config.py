@@ -15,4 +15,5 @@ class Config:
     STUDENT_PATTERN = r'^[a-z]+\d{2}@thu\.de$'
     PROF_PATTERN = r'^[a-zA-Z]+\.[a-zA-Z]+@thu\.de$'
     VERIFICATION_TIMEOUT = 300
+    GUILD_ID = os.getenv('GUILD_ID')
  

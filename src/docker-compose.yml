@@ -1,0 +1,4 @@
+services: 
+  virux:
+    build:
+      context: /home/rocky/Virux/src

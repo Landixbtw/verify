@@ -12,9 +12,7 @@ this happens with your student email adress.
     > verify_remove: user does not exist
     > 
 - Get a new email adress for sending verification email.
-- Turn this into a docker container for server deployment.
 - Switch from .json file to actuall Database.
-- verify crashes when it gets input.
 - confirm gives console error when no input.
 - move every command to its own file.
 - maybe add logging for: 

@@ -1,4 +1,7 @@
-services: 
-  virux:
-    build:
-      context: /home/rocky/Virux/src
+services:
+  verify:
+    image: verify  # Bot image named "verify"
+    env_file:
+      - .env  # Load environment variables from .env
+    restart: unless-stopped
+

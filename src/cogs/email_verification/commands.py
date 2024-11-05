@@ -122,6 +122,7 @@ class VerificationCommands:
             verification_code = secrets.token_hex(3).upper()
             
             try:
+
                 # Add pending verification before sending email
                 self.storage.add_pending_verification(ctx.author.id, email, verification_code)
                 

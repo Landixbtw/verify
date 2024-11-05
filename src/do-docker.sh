@@ -24,4 +24,4 @@ sudo docker login
 
 # Build and push the image for ARM64 platform
 echo "Building and pushing the image for ARM64..."
-sudo docker buildx build --platform linux/arm64 --push -t landixbtw987/verify_arm:latest .
+sudo docker buildx build --platform linux/arm64 --push --no-cache -t landixbtw987/verify_arm:latest .

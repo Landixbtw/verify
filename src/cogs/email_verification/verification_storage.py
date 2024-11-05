@@ -1,53 +1,99 @@
+
 import discord
-import json
-import aiofiles
+import mariadb
 import hashlib
 import logging
 from datetime import datetime
 from .utils import VerificationUtils
 from .config import Config
+from dotenv import load_dotenv
+import os
+
+# Load environment variables from .env file
+load_dotenv()
 
 logger = logging.getLogger('email_verification')
 
 class VerificationStorage:
     def __init__(self, bot):
         self.bot = bot
-        self.verified_users_file = "verified_users.json"
         self.pending_verifications = {}
 
-    async def load_verified_users(self) -> dict:
+        # Load database credentials from environment variables
+        db_user = os.getenv("DB_USER")
+        db_password = os.getenv("DB_PASSWORD")
+        db_host = os.getenv("DB_HOST")
+        db_port = int(os.getenv("DB_PORT"))
+        db_name = os.getenv("DB_NAME")
+
+        # MariaDB connection setup
         try:
-            async with aiofiles.open(self.verified_users_file, 'r') as f:
-                content = await f.read()
-                return json.loads(content) if content else {}
-        except FileNotFoundError:
-            return {}
+            self.conn = mariadb.connect(
+                user=db_user,
+                password=db_password,
+                host=db_host,
+                port=db_port,
+                database=db_name
+            )
+            self.cursor = self.conn.cursor()
+            logger.info("Connected to MariaDB database.")
+        except mariadb.Error as e:
+            logger.error(f"Error connecting to MariaDB: {e}")
+            raise e
+
+    async def load_verified_users(self) -> dict:
+        """Load verified users from the database"""
+        verified_users = {}
+        try:
+            self.cursor.execute("SELECT user_id, email_hash FROM verified_users")
+            for user_id, email_hash in self.cursor.fetchall():
+                verified_users[str(user_id)] = email_hash
+        except mariadb.Error as e:
+            logger.error(f"Error loading verified users: {e}")
+        return verified_users
 
     async def save_verified_user(self, user_id: int, email_hash: str) -> None:
-        verified_users = await self.load_verified_users()
-        verified_users[str(user_id)] = email_hash
-        
-        async with aiofiles.open(self.verified_users_file, 'w') as f:
-            await f.write(json.dumps(verified_users))
+        """Save a verified user to the database"""
+        try:
+            self.cursor.execute(
+                "REPLACE INTO verified_users (user_id, email_hash) VALUES (?, ?)",
+                (user_id, email_hash)
+            )
+            self.conn.commit()
+        except mariadb.Error as e:
+            logger.error(f"Error saving verified user: {e}")
 
     async def is_verified(self, user_id: int) -> bool:
-        verified_users = await self.load_verified_users()
-        return str(user_id) in verified_users
+        """Check if a user is verified in the database"""
+        try:
+            self.cursor.execute(
+                "SELECT EXISTS(SELECT 1 FROM verified_users WHERE user_id=?)",
+                (user_id,)
+            )
+            return self.cursor.fetchone()[0] == 1
+        except mariadb.Error as e:
+            logger.error(f"Error checking verification status: {e}")
+            return False
 
     async def is_email_used(self, email: str) -> tuple[bool, str]:
+        """Check if an email is already used in the database"""
         email_hash = hashlib.sha256(email.encode()).hexdigest()
-        verified_users = await self.load_verified_users()
-        
-        for user_id, stored_hash in verified_users.items():
-            if stored_hash == email_hash:
-                return True, user_id
+        try:
+            self.cursor.execute(
+                "SELECT user_id FROM verified_users WHERE email_hash=?",
+                (email_hash,)
+            )
+            result = self.cursor.fetchone()
+            if result:
+                return True, str(result[0])
+        except mariadb.Error as e:
+            logger.error(f"Error checking if email is used: {e}")
         return False, ""
 
     async def remove_verification_timeout(self, user_id: int, expired: bool = False):
         """Remove a pending verification and handle timeout notifications"""
         if user_id in self.pending_verifications:
-            verification = self.pending_verifications[user_id]
-            del self.pending_verifications[user_id]
+            verification = self.pending_verifications.pop(user_id)
             
             if expired:
                 try:

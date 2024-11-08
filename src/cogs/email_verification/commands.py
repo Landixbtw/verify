@@ -86,52 +86,68 @@ class VerificationCommands:
                                     "Beispiel: `>verify foobar@thu.de`")
 
             # Track verification attempt
-            await self.stats.log_verification_attempt(email)
+            try:
+                await self.stats.log_verification_attempt(email)
+            except Exception as e:
+                logger.error(f"Failed to log verification attempt: {e}")
+                # Continue execution as this is not critical
 
-            # Check if user is already verified
-            if await self.storage.is_verified(ctx.author.id):
-                await self.stats.log_verification_failure('already_verified')
-                await self.log_to_channel(VerificationUtils.create_log_embed(
-                    "Verification Attempt - Already Verified",
-                    "User tried to verify again",
-                    discord.Color.yellow(),
-                    [
-                        ("User", f"{ctx.author} ({ctx.author.id})", True),
-                        ("Email", email, True)
-                    ]
-                ))
-                return await ctx.send("Du bist bereits verifiziert!")
+            try:
+                # Check if user is already verified
+                if await self.storage.is_verified(ctx.author.id):
+                    await self.stats.log_verification_failure('already_verified')
+                    await self.log_to_channel(VerificationUtils.create_log_embed(
+                        "Verification Attempt - Already Verified",
+                        "User tried to verify again",
+                        discord.Color.yellow(),
+                        [
+                            ("User", f"{ctx.author} ({ctx.author.id})", True),
+                            ("Email", email, True)
+                        ]
+                    ))
+                    return await ctx.send("Du bist bereits verifiziert!")
+            except Exception as e:
+                logger.error(f"Failed to check verification status: {e}")
+                return await ctx.send("Es gab einen Fehler beim Überprüfen deines Verifizierungsstatus. Bitte versuche es später erneut.")
 
             # Validate email format
-            is_valid, message = VerificationUtils.is_valid_student_email(email)
-            if not is_valid:
-                await self.stats.log_verification_failure('invalid_email')
-                await self.log_to_channel(VerificationUtils.create_log_embed(
-                    "Verification Attempt - Invalid Email",
-                    message,
-                    discord.Color.red(),
-                    [
-                        ("User", f"{ctx.author} ({ctx.author.id})", True),
-                        ("Email", email, True),
-                        ("Reason", message, False)
-                    ]
-                ))
-                return await ctx.send("Ungültige E-Mail-Adresse. Bitte verwende deine THU-E-Mail-Adresse.")
+            try:
+                is_valid, message = VerificationUtils.is_valid_student_email(email)
+                if not is_valid:
+                    await self.stats.log_verification_failure('invalid_email')
+                    await self.log_to_channel(VerificationUtils.create_log_embed(
+                        "Verification Attempt - Invalid Email",
+                        message,
+                        discord.Color.red(),
+                        [
+                            ("User", f"{ctx.author} ({ctx.author.id})", True),
+                            ("Email", email, True),
+                            ("Reason", message, False)
+                        ]
+                    ))
+                    return await ctx.send("Ungültige E-Mail-Adresse. Bitte verwende deine THU-E-Mail-Adresse.")
+            except Exception as e:
+                logger.error(f"Failed to validate email: {e}")
+                return await ctx.send("Es gab einen Fehler bei der E-Mail-Validierung. Bitte versuche es später erneut.")
 
-            # Check if email is already in use
-            is_used, existing_user = await self.storage.is_email_used(email)
-            if is_used:
-                await self.stats.log_verification_failure('email_in_use')
-                await self.log_to_channel(VerificationUtils.create_log_embed(
-                    "Verification Attempt - Email In Use",
-                    "Email address is already verified by another user",
-                    discord.Color.red(),
-                    [
-                        ("User", f"{ctx.author} ({ctx.author.id})", True),
-                        ("Email", email, True)
-                    ]
-                ))
-                return await ctx.send("Diese E-Mail-Adresse wurde bereits verwendet.")
+            try:
+                # Check if email is already in use
+                is_used, existing_user = await self.storage.is_email_used(email)
+                if is_used:
+                    await self.stats.log_verification_failure('email_in_use')
+                    await self.log_to_channel(VerificationUtils.create_log_embed(
+                        "Verification Attempt - Email In Use",
+                        "Email address is already verified by another user",
+                        discord.Color.red(),
+                        [
+                            ("User", f"{ctx.author} ({ctx.author.id})", True),
+                            ("Email", email, True)
+                        ]
+                    ))
+                    return await ctx.send("Diese E-Mail-Adresse wurde bereits verwendet.")
+            except Exception as e:
+                logger.error(f"Failed to check if email is in use: {e}")
+                return await ctx.send("Es gab einen Fehler beim Überprüfen der E-Mail-Adresse. Bitte versuche es später erneut.")
 
             await ctx.send("Sende Verifizierungscode... Dies kann einen Moment dauern.")
             verification_code = secrets.token_hex(3).upper()
@@ -145,8 +161,11 @@ class VerificationCommands:
                 
                 # Create timeout task
                 async def timeout_verification():
-                    await asyncio.sleep(Config.VERIFICATION_TIMEOUT)
-                    await self.storage.remove_verification_timeout(ctx.author.id, expired=True)
+                    try:
+                        await asyncio.sleep(Config.VERIFICATION_TIMEOUT)
+                        await self.storage.remove_verification_timeout(ctx.author.id, expired=True)
+                    except Exception as e:
+                        logger.error(f"Error in timeout task: {e}")
                 
                 asyncio.create_task(timeout_verification())
                 
@@ -169,11 +188,15 @@ class VerificationCommands:
                 await self.stats.log_verification_failure('email_error')
                 logger.error(f"Failed to send verification email: {e}")
                 if ctx.author.id in self.storage.pending_verifications:
-                    del self.storage.pending_verifications[ctx.author.id]
+                    try:
+                        del self.storage.pending_verifications[ctx.author.id]
+                    except Exception as cleanup_error:
+                        logger.error(f"Failed to clean up pending verification: {cleanup_error}")
                 await ctx.send("Es gab einen Fehler beim Senden der Verifizierungs-E-Mail.")
-                raise
+                return
 
         except Exception as e:
+            logger.error(f"Unexpected error in verify_email: {e}")
             await self.handle_unexpected_error(ctx, e)
 
     async def confirm_email(self, ctx, code: str):

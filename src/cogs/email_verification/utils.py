@@ -5,6 +5,7 @@ import re
 import logging
 from .config import Config
 
+
 class VerificationUtils:
     @staticmethod
     def create_log_embed(title: str, description: str, color: discord.Color, fields: list) -> discord.Embed:

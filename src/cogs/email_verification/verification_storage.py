@@ -1,16 +1,14 @@
-
 import discord
 import mariadb
 import hashlib
 import logging
+from typing import Optional, Dict, Any
 from datetime import datetime
 from .utils import VerificationUtils
 from .config import Config
-from .commands import VerificationCommands
 from dotenv import load_dotenv
 import os
 
-# Load environment variables from .env file
 load_dotenv()
 
 logger = logging.getLogger('email_verification')
@@ -18,14 +16,14 @@ logger = logging.getLogger('email_verification')
 class VerificationStorage:
     def __init__(self, bot):
         self.bot = bot
-        self.verification_commands = VerificationCommands(bot)
         self.pending_verifications = {}
+        self.log_channel = None
 
-        # Load database credentials from environment variables
+        # Load database credentials
         db_user = os.getenv("DB_USER")
         db_password = os.getenv("DB_PASSWORD")
         db_host = os.getenv("DB_HOST")
-        db_port = os.getenv("DB_PORT")
+        db_port = int(os.getenv("DB_PORT")) # error is not error, type is int
         db_name = os.getenv("DB_NAME")
 
         # MariaDB connection setup
@@ -42,6 +40,27 @@ class VerificationStorage:
         except mariadb.Error as e:
             logger.error(f"Error connecting to MariaDB: {e}")
             raise e
+
+    async def get_log_channel(self):
+        """Get or retrieve the logging channel"""
+        if self.log_channel is None:
+            for guild in self.bot.guilds:
+                channel = discord.utils.get(guild.channels, name=Config.LOG_CHANNEL_NAME)
+                if channel:
+                    self.log_channel = channel
+                    break
+        return self.log_channel
+
+    async def log_to_channel(self, embed: discord.Embed):
+        """Send a log message to the designated channel"""
+        channel = await self.get_log_channel()
+        if channel is None:
+            logger.error(f"Could not find channel named {Config.LOG_CHANNEL_NAME}")
+            return
+        try:
+            await channel.send(embed=embed)
+        except Exception as e:
+            logger.error(f"Failed to send log message: {e}")
 
     async def load_verified_users(self) -> dict:
         """Load verified users from the database"""
@@ -113,7 +132,7 @@ class VerificationStorage:
                                 ("Email", verification['email'], True)
                             ]
                         )
-                        await self.verification_commands.log_to_channel(log_embed)
+                        await self.log_to_channel(log_embed)
                         
                 except Exception as e:
                     logger.error(f"Failed to notify user of expired verification: {e}")
@@ -145,4 +164,3 @@ class VerificationStorage:
             time_elapsed = (datetime.now() - verification['created_at']).total_seconds()
             return time_elapsed > Config.VERIFICATION_TIMEOUT
         return True
-

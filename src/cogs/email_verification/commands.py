@@ -118,11 +118,25 @@ class VerificationCommands:
                 ))
                 return await ctx.send("Ungültige E-Mail-Adresse. Bitte verwende deine THU-E-Mail-Adresse.")
 
+            # Check if email is already in use
+            is_used, existing_user = await self.storage.is_email_used(email)
+            if is_used:
+                await self.stats.log_verification_failure('email_in_use')
+                await self.log_to_channel(VerificationUtils.create_log_embed(
+                    "Verification Attempt - Email In Use",
+                    "Email address is already verified by another user",
+                    discord.Color.red(),
+                    [
+                        ("User", f"{ctx.author} ({ctx.author.id})", True),
+                        ("Email", email, True)
+                    ]
+                ))
+                return await ctx.send("Diese E-Mail-Adresse wurde bereits verwendet.")
+
             await ctx.send("Sende Verifizierungscode... Dies kann einen Moment dauern.")
             verification_code = secrets.token_hex(3).upper()
             
             try:
-
                 # Add pending verification before sending email
                 self.storage.add_pending_verification(ctx.author.id, email, verification_code)
                 

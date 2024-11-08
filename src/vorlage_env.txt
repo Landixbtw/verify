@@ -1,14 +1,14 @@
-
-TOKEN=""
+# NO "" in the .env file for server
+TOKEN="" 
 SMTP_SERVER="smtp.gmail.com"
 SMTP_PORT=587
-SENDER_EMAIL="email@email.com"
-EMAIL_PASSWORD="smtp password"
-GUILD_ID = 
+SENDER_EMAIL=""
+EMAIL_PASSWORD=""
+GUILD_ID=''
 LOG_CHANNEL_NAME="bot-logs"
 
-DB_USER=your_user
-DB_PASSWORD=your_password
-DB_HOST=your_host  # Use 'localhost' or a Docker service name if needed
+DB_USER=bot
+DB_PASSWORD=
+DB_HOST=
 DB_PORT=3306
-DB_NAME=email_verification
+DB_NAME=

@@ -75,7 +75,7 @@ def main():
     logger.info(f"Current working directory: {os.getcwd()}")
     logger.info(f".env file exists: {os.path.exists('.env')}")
     load_dotenv(verbose=True)
-    
+
     # Get token
     token = str(os.getenv("TOKEN"))
     if not token or not token.strip():

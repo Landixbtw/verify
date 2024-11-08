@@ -6,6 +6,7 @@ import logging
 from datetime import datetime
 from .utils import VerificationUtils
 from .config import Config
+from .commands import VerificationCommands
 from dotenv import load_dotenv
 import os
 
@@ -17,13 +18,14 @@ logger = logging.getLogger('email_verification')
 class VerificationStorage:
     def __init__(self, bot):
         self.bot = bot
+        self.verification_commands = VerificationCommands(bot)
         self.pending_verifications = {}
 
         # Load database credentials from environment variables
         db_user = os.getenv("DB_USER")
         db_password = os.getenv("DB_PASSWORD")
         db_host = os.getenv("DB_HOST")
-        db_port = os.getenv('DB_PORT', 3306)
+        db_port = os.getenv("DB_PORT")
         db_name = os.getenv("DB_NAME")
 
         # MariaDB connection setup
@@ -111,7 +113,7 @@ class VerificationStorage:
                                 ("Email", verification['email'], True)
                             ]
                         )
-                        await self.log_to_channel(log_embed)
+                        await self.verification_commands.log_to_channel(log_embed)
                         
                 except Exception as e:
                     logger.error(f"Failed to notify user of expired verification: {e}")

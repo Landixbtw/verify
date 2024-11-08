@@ -216,7 +216,7 @@ class VerificationCommands:
 
             # Assign role
             try:
-                guild = ctx.bot.get_guild(int(Config.GUILD_ID))
+                guild = ctx.bot.get_guild(Config.GUILD_ID)
                 if guild:
                     member = await guild.fetch_member(ctx.author.id)
                     if member:

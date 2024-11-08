@@ -5,6 +5,9 @@ import os
 import logging
 from help import setup as help_setup
 
+if not os.path.exists("./Logs"):
+    os.makedirs("./Logs")
+
 # Set up logging
 logging.basicConfig(
     level=logging.INFO,

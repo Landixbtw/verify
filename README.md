@@ -19,7 +19,7 @@ The user email is hashed with the userid in a database, to prevent the same emai
 from connecting twice. ex.
 
 ```json 
-{"353999878579290112": "7f2a9584d8b0ffd7543aea51f6bec53711d6246bd5b63470c393cffea8cf7dd5"}
+{"353999878579290112": "5b63bb9ceb264f891bd62606d49685b773e12eb5068a9ef1212612cf826e09ff"}
 ```
 
 # License

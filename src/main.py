@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 import os
 import logging
 from help import setup as help_setup
+from .config import Config
+
 
 if not os.path.exists("./Logs"):
     os.makedirs("./Logs")
@@ -23,7 +25,7 @@ logger = logging.getLogger('bot')
 class Bot(commands.Bot):
     def __init__(self):
         super().__init__(
-            command_prefix=">",
+            command_prefix=Config.PREFIX,
             intents=discord.Intents.all(),
             help_command=None
         )

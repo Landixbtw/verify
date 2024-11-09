@@ -1,6 +1,6 @@
 from discord.ext import commands
 import discord
-from typing import Optional, Union
+from typing import Optional
 from .commands import VerificationCommands
 
 class EmailVerification(commands.Cog, name="Email Verification"):
@@ -28,21 +28,16 @@ class EmailVerification(commands.Cog, name="Email Verification"):
     async def remove_verify(self, ctx, member: discord.Member):
         """Remove verification from a user (Admin only)"""
         await self.cmd_handler.remove_verify(ctx, member)
+
     @remove_verify.error
     async def remove_verify_error(self, ctx, error):
         if isinstance(error, commands.MissingRequiredArgument):
             if error.param.name == 'member':
-                await ctx.send("Bitte gib einen Benutzer an!\nBeispiel: `!remove_verify @User`")
+                await ctx.send(f"Bitte gib einen Benutzer an!\nBeispiel: `{Config.PREFIX}remove_verify @User`")
         elif isinstance(error, commands.MemberNotFound):
             await ctx.send("Dieser Benutzer wurde nicht gefunden!")
         elif isinstance(error, commands.MissingPermissions):
             await ctx.send("Du benötigst Administrator-Rechte um diesen Befehl auszuführen!")
-
-    @commands.command(name="stats")
-    @commands.has_permissions(administrator=True)
-    async def show_stats(self, ctx, days: int = 7):
-        """Show verification statistics (Admin only)"""
-        await self.cmd_handler.show_stats(ctx, days)
 
     @commands.command(name="verify_debug")
     @commands.has_permissions(administrator=True)

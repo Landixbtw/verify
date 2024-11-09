@@ -34,6 +34,12 @@ def test_verification_setup():
         'EMAIL_PASSWORD',
         'GUILD_ID',
         'LOG_CHANNEL_NAME',
+
+        'DB_USER',
+        'DB_PASSWORD',
+        'DB_HOST',
+        'DB_PORT',
+        'DB_NAME',
     ]
 
     missing_env = []

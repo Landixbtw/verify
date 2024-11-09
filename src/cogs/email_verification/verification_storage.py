@@ -120,7 +120,7 @@ class VerificationStorage:
                 try:
                     user = await self.bot.fetch_user(user_id)
                     if user:
-                        await user.send("Dein Verifizierungscode ist abgelaufen. Bitte benutze `>verify <email>` um einen neuen Code anzufordern.")
+                        await user.send(f"Dein Verifizierungscode ist abgelaufen. Bitte benutze `{Config.PREFIX}verify <email>` um einen neuen Code anzufordern.")
                         
                         # Create and send log embed
                         log_embed = VerificationUtils.create_log_embed(

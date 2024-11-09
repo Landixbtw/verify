@@ -10,7 +10,6 @@ from .config import Config
 from .email_service import EmailService
 from .utils import VerificationUtils
 from .verification_storage import VerificationStorage
-from .stats import VerificationStats
 
 logger = logging.getLogger('email_verification')
 
@@ -31,7 +30,6 @@ class VerificationCommands:
     def __init__(self, bot):
         self.bot = bot
         self.storage = VerificationStorage(bot)
-        self.stats = VerificationStats()
         self.log_channel = None
 
     async def get_log_channel(self):
@@ -83,19 +81,11 @@ class VerificationCommands:
                     [("User", f"{ctx.author} ({ctx.author.id})", True)]
                 ))
                 return await ctx.send("Bitte gib deine E-Mail-Adresse an.\n"
-                                    "Beispiel: `>verify foobar@thu.de`")
-
-            # Track verification attempt
-            try:
-                await self.stats.log_verification_attempt(email)
-            except Exception as e:
-                logger.error(f"Failed to log verification attempt: {e}")
-                # Continue execution as this is not critical
+                                f"Beispiel: `{Config.PREFIX}verify foobar@thu.de`")
 
             try:
                 # Check if user is already verified
                 if await self.storage.is_verified(ctx.author.id):
-                    await self.stats.log_verification_failure('already_verified')
                     await self.log_to_channel(VerificationUtils.create_log_embed(
                         "Verification Attempt - Already Verified",
                         "User tried to verify again",
@@ -108,13 +98,12 @@ class VerificationCommands:
                     return await ctx.send("Du bist bereits verifiziert!")
             except Exception as e:
                 logger.error(f"Failed to check verification status: {e}")
-                return await ctx.send("Es gab einen Fehler beim Überprüfen deines Verifizierungsstatus. Bitte versuche es später erneut.")
+                return await ctx.send("Es gab einen Fehler beim Überprüfen deines Verifizierungsstatus.")
 
             # Validate email format
             try:
                 is_valid, message = VerificationUtils.is_valid_student_email(email)
                 if not is_valid:
-                    await self.stats.log_verification_failure('invalid_email')
                     await self.log_to_channel(VerificationUtils.create_log_embed(
                         "Verification Attempt - Invalid Email",
                         message,
@@ -128,13 +117,12 @@ class VerificationCommands:
                     return await ctx.send("Ungültige E-Mail-Adresse. Bitte verwende deine THU-E-Mail-Adresse.")
             except Exception as e:
                 logger.error(f"Failed to validate email: {e}")
-                return await ctx.send("Es gab einen Fehler bei der E-Mail-Validierung. Bitte versuche es später erneut.")
+                return await ctx.send("Es gab einen Fehler bei der E-Mail-Validierung.")
 
             try:
                 # Check if email is already in use
                 is_used, existing_user = await self.storage.is_email_used(email)
                 if is_used:
-                    await self.stats.log_verification_failure('email_in_use')
                     await self.log_to_channel(VerificationUtils.create_log_embed(
                         "Verification Attempt - Email In Use",
                         "Email address is already verified by another user",
@@ -147,7 +135,7 @@ class VerificationCommands:
                     return await ctx.send("Diese E-Mail-Adresse wurde bereits verwendet.")
             except Exception as e:
                 logger.error(f"Failed to check if email is in use: {e}")
-                return await ctx.send("Es gab einen Fehler beim Überprüfen der E-Mail-Adresse. Bitte versuche es später erneut.")
+                return await ctx.send("Es gab einen Fehler beim Überprüfen der E-Mail-Adresse.")
 
             await ctx.send("Sende Verifizierungscode... Dies kann einen Moment dauern.")
             verification_code = secrets.token_hex(3).upper()
@@ -181,11 +169,10 @@ class VerificationCommands:
                 
                 await ctx.send("✅ Verifizierungscode wurde gesendet!\n"
                              "Bitte überprüfe deine Universitäts-E-Mail für den Verifizierungscode.\n"
-                             "Benutze `>confirm <code>` um die Verifizierung abzuschließen.\n"
+                             f"Benutze `{Config.PREFIX}confirm <code>` um die Verifizierung abzuschließen.\n"
                              "Der Code läuft in 5 Minuten ab.")
                 
             except Exception as e:
-                await self.stats.log_verification_failure('email_error')
                 logger.error(f"Failed to send verification email: {e}")
                 if ctx.author.id in self.storage.pending_verifications:
                     try:
@@ -210,12 +197,12 @@ class VerificationCommands:
                     discord.Color.yellow(),
                     [("User", f"{ctx.author} ({ctx.author.id})", True)]
                 ))
-                return await ctx.send("Keine ausstehende Verifizierung. Bitte benutze `>verify <deine.universitaets.email>` zuerst.")
+                return await ctx.send(f"Keine ausstehende Verifizierung. Bitte benutze `{Config.PREFIX}verify <email>` zuerst.")
 
             # Check for timeout
             if await self.storage.check_verification_timeout(ctx.author.id):
                 await self.storage.remove_verification_timeout(ctx.author.id, expired=True)
-                return await ctx.send("Dein Verifizierungscode ist abgelaufen. Bitte benutze `>verify <email>` um einen neuen Code anzufordern.")
+                return await ctx.send(f"Dein Verifizierungscode ist abgelaufen. Bitte benutze `{Config.PREFIX}verify <email>` um einen neuen Code anzufordern.")
 
             # Check attempts
             if verification['attempts'] >= 3:
@@ -229,7 +216,7 @@ class VerificationCommands:
                     ]
                 ))
                 del self.storage.pending_verifications[ctx.author.id]
-                return await ctx.send("Zu viele Versuche. Bitte starte erneut mit `>verify <email>`")
+                return await ctx.send(f"Zu viele Versuche. Bitte starte erneut mit `{Config.PREFIX}verify <email>`")
 
             # Validate code
             if code.upper() != verification['code']:
@@ -288,7 +275,6 @@ class VerificationCommands:
                 ))
 
             del self.storage.pending_verifications[ctx.author.id]
-            await self.stats.log_verification_success()
             await ctx.send("E-Mail erfolgreich verifiziert! Dir wurde die Verified-Rolle zugewiesen.")
 
         except Exception as e:
@@ -299,8 +285,7 @@ class VerificationCommands:
         try:
             verified_users = await self.storage.load_verified_users()
             if str(member.id) in verified_users:
-                # set the user email hash to 0 but keep member id 
-                await self.storage.save_verified_user(member.id, None)  # Pass member.id since method expects int
+                await self.storage.save_verified_user(member.id, None)
                 
                 verified_role = discord.utils.get(ctx.guild.roles, name="Verified")
                 if verified_role and verified_role in member.roles:
@@ -318,51 +303,5 @@ class VerificationCommands:
                 await ctx.send(f"Verifizierung von {member} wurde entfernt.")
             else:
                 await ctx.send(f"{member} ist nicht verifiziert.")
-        except Exception as e:
-            await self.handle_unexpected_error(ctx, e)
-
-    async def show_stats(self, ctx, days: int = 7):
-        """Handle the stats command"""
-        try:
-            stats = await self.stats.get_stats_report(days)
-            
-            embed = discord.Embed(
-                title=f"Verification Statistics (Last {days} days)",
-                color=discord.Color.blue(),
-                timestamp=datetime.now()
-            )
-            
-            # Add general stats
-            embed.add_field(
-                name="General Stats",
-                value=f"Total Attempts: {stats['total_attempts']}\n"
-                      f"Successful: {stats['successful_verifications']}\n"
-                      f"Failed: {stats['failed_verifications']}\n"
-                      f"Success Rate: {stats['success_rate']:.1f}%",
-                inline=False
-            )
-            
-            # Add failure breakdown
-            embed.add_field(
-                name="Failure Breakdown",
-                value=f"Expired: {stats['expired_verifications']}\n"
-                      f"Invalid Emails: {stats['invalid_emails']}\n"
-                      f"Already Verified: {stats['already_verified_attempts']}\n"
-                      f"Email Errors: {stats['email_send_errors']}\n"
-                      f"Invalid Codes: {stats['invalid_codes']}",
-                inline=False
-            )
-            
-            # Add domain stats
-            domain_stats = "\n".join(f"{domain}: {count}" 
-                                   for domain, count in stats['domains'].items())
-            embed.add_field(
-                name="Domain Statistics",
-                value=domain_stats or "No domain data",
-                inline=False
-            )
-            
-            await ctx.send(embed=embed)
-            
         except Exception as e:
             await self.handle_unexpected_error(ctx, e)

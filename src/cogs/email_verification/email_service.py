@@ -8,7 +8,7 @@ class EmailService:
         msg = MIMEText(
             f"Hallo {username},\n\n"
             f"Dein Verifizierungscode lautet: {code}\n\n"
-            "Bitte gib diesen Code mit dem Befehl >confirm <code> ein.\n"
+            f"Bitte gib diesen Code mit dem Befehl {Config.PREFIX}confirm <code> ein.\n"
             "Der Code läuft in 5 Minuten ab.\n\n"
             "Mit freundlichen Grüßen,\nDein Verifikations-Bot"
         )

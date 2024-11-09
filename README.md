@@ -4,7 +4,7 @@
 this happens with your student email adress.
 
 - You are more then welcome to contribute and open PR's 
-- If you have any concerns please open an issue.
+- If you have any concerns security or otherwise please open an issue. Or contact the moderation team on the discord server via Modmail.
 
 
 ### 📝 TODOs

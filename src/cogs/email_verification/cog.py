@@ -2,6 +2,7 @@ from discord.ext import commands
 import discord
 from typing import Optional
 from .commands import VerificationCommands
+from .config import Config
 
 class EmailVerification(commands.Cog, name="Email Verification"):
     """Email verification commands"""
@@ -33,7 +34,7 @@ class EmailVerification(commands.Cog, name="Email Verification"):
     async def remove_verify_error(self, ctx, error):
         if isinstance(error, commands.MissingRequiredArgument):
             if error.param.name == 'member':
-                await ctx.send(f"Bitte gib einen Benutzer an!\nBeispiel: `{Config.PREFIX}remove_verify @User`")
+                await ctx.send("Bitte gib einen Benutzer an!\nBeispiel: `{Config.PREFIX}remove_verify @User`")
         elif isinstance(error, commands.MemberNotFound):
             await ctx.send("Dieser Benutzer wurde nicht gefunden!")
         elif isinstance(error, commands.MissingPermissions):

@@ -3,19 +3,23 @@ from discord.ext import commands
 from dotenv import load_dotenv
 import os
 import logging
+from logging.handlers import RotatingFileHandler
 from help import setup as help_setup
-from .config import Config
-
+from cogs.email_verification.config import Config
 
 if not os.path.exists("./Logs"):
     os.makedirs("./Logs")
 
-# Set up logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("./Logs/bot.log", encoding='utf-8', mode='w'),
+        RotatingFileHandler(
+            "./Logs/bot.log",
+            maxBytes=1024*1024,
+            backupCount=5,
+            encoding='utf-8',
+        ),
         logging.StreamHandler()
     ]
 )

@@ -1,5 +1,6 @@
 from discord.ext import commands
 import discord
+from cogs.email_verification.config import Config
 
 class CustomHelpCommand(commands.HelpCommand):
     async def send_bot_help(self, mapping):
@@ -16,7 +17,7 @@ class CustomHelpCommand(commands.HelpCommand):
                 # Get cog name, if no cog use "Andere Befehle"
                 cog_name = getattr(cog, "qualified_name", "Andere Befehle")
                 # Add field for each category
-                command_list = "\n".join(f"`>{c.name}` - {c.brief}" for c in filtered)
+                command_list = "\n".join(f"`{Config.PREFIX}{c.name}` - {c.brief}" for c in filtered)
                 if command_list:
                     embed.add_field(
                         name=f"📌 {cog_name}",
@@ -24,7 +25,7 @@ class CustomHelpCommand(commands.HelpCommand):
                         inline=False
                     )
 
-        embed.set_footer(text="Nutze >help <Befehl> für detaillierte Informationen zu einem Befehl.")
+        embed.set_footer(text=f"Nutze {Config.PREFIX}help <Befehl> für detaillierte Informationen zu einem Befehl.")
         channel = self.get_destination()
         await channel.send(embed=embed)
 
@@ -44,7 +45,7 @@ class CustomHelpCommand(commands.HelpCommand):
             
         embed.add_field(
             name="Verwendung",
-            value=f"`>{command.name} {command.signature}`",
+            value=f"`{Config.PREFIX}{command.name} {command.signature}`",
             inline=False
         )
         
@@ -61,7 +62,7 @@ class CustomHelpCommand(commands.HelpCommand):
         filtered = await self.filter_commands(cog.get_commands(), sort=True)
         for command in filtered:
             embed.add_field(
-                name=f">{command.name}",
+                name=f"{Config.PREFIX}{command.name}",
                 value=command.brief or "Keine kurze Beschreibung verfügbar.",
                 inline=False
             )

@@ -30,43 +30,23 @@ class VerificationCommands:
     def __init__(self, bot):
         self.bot = bot
         self.storage = VerificationStorage(bot)
-        self.log_channel = None
-
-    async def get_log_channel(self):
-        """Get or retrieve the logging channel"""
-        if self.log_channel is None:
-            for guild in self.bot.guilds:
-                channel = discord.utils.get(guild.channels, name=Config.LOG_CHANNEL_NAME)
-                if channel:
-                    self.log_channel = channel
-                    break
-        return self.log_channel
-
-    async def log_to_channel(self, embed: discord.Embed):
-        """Send a log message to the designated channel"""
-        channel = await self.get_log_channel()
-        if channel is None:
-            logger.error(f"Could not find channel named {Config.LOG_CHANNEL_NAME}")
-            return
-
-        try:
-            await channel.send(embed=embed)
-        except Exception as e:
-            logger.error(f"Failed to send log message: {e}")
 
     async def handle_unexpected_error(self, ctx, error):
         """Handle unexpected errors and log them"""
         error_id = secrets.token_hex(4)
-        await self.log_to_channel(VerificationUtils.create_log_embed(
-            "Unexpected Error",
-            f"Error ID: {error_id}",
-            discord.Color.red(),
-            [
-                ("User", f"{ctx.author} ({ctx.author.id})", True),
-                ("Error Type", type(error).__name__, True),
-                ("Error", str(error), False)
-            ]
-        ))
+        await VerificationUtils.log_to_channel(
+            self.bot,
+            VerificationUtils.create_log_embed(
+                "Unexpected Error",
+                f"Error ID: {error_id}",
+                discord.Color.red(),
+                [
+                    ("User", f"{ctx.author} ({ctx.author.id})", True),
+                    ("Error Type", type(error).__name__, True),
+                    ("Error", str(error), False)
+                ]
+            )
+        )
         await ctx.send(f"Ein unerwarteter Fehler ist aufgetreten. Error ID: {error_id}")
         logger.error(f"Unexpected error {error_id}: {str(error)}", exc_info=error)
 
@@ -74,64 +54,73 @@ class VerificationCommands:
         """Handle the verify command"""
         try:
             if not email:
-                await self.log_to_channel(VerificationUtils.create_log_embed(
-                    "Verification Attempt - No Email",
-                    "User tried to verify without providing email",
-                    discord.Color.yellow(),
-                    [("User", f"{ctx.author} ({ctx.author.id})", True)]
-                ))
-                return await ctx.send("Bitte gib deine E-Mail-Adresse an.\n"
-                                f"Beispiel: `{Config.PREFIX}verify foobar@thu.de`")
+                await VerificationUtils.log_to_channel(
+                    self.bot,
+                    VerificationUtils.create_log_embed(
+                        "Verification Attempt - No Email",
+                        "User tried to verify without providing email",
+                        discord.Color.yellow(),
+                        [("User", f"{ctx.author} ({ctx.author.id})", True)]
+                    )
+                )
+                return await ctx.send(f"Bitte gib deine E-Mail-Adresse an.\n"
+                                    f"Beispiel: `{Config.PREFIX}verify foobar@thu.de`")
 
             try:
-                # Check if user is already verified
                 if await self.storage.is_verified(ctx.author.id):
-                    await self.log_to_channel(VerificationUtils.create_log_embed(
-                        "Verification Attempt - Already Verified",
-                        "User tried to verify again",
-                        discord.Color.yellow(),
-                        [
-                            ("User", f"{ctx.author} ({ctx.author.id})", True),
-                            ("Email", email, True)
-                        ]
-                    ))
+                    await VerificationUtils.log_to_channel(
+                        self.bot,
+                        VerificationUtils.create_log_embed(
+                            "Verification Attempt - Already Verified",
+                            "User tried to verify again",
+                            discord.Color.yellow(),
+                            [
+                                ("User", f"{ctx.author} ({ctx.author.id})", True),
+                                ("Email", email, True)
+                            ]
+                        )
+                    )
                     return await ctx.send("Du bist bereits verifiziert!")
             except Exception as e:
                 logger.error(f"Failed to check verification status: {e}")
                 return await ctx.send("Es gab einen Fehler beim Überprüfen deines Verifizierungsstatus.")
 
-            # Validate email format
             try:
                 is_valid, message = VerificationUtils.is_valid_student_email(email)
                 if not is_valid:
-                    await self.log_to_channel(VerificationUtils.create_log_embed(
-                        "Verification Attempt - Invalid Email",
-                        message,
-                        discord.Color.red(),
-                        [
-                            ("User", f"{ctx.author} ({ctx.author.id})", True),
-                            ("Email", email, True),
-                            ("Reason", message, False)
-                        ]
-                    ))
+                    await VerificationUtils.log_to_channel(
+                        self.bot,
+                        VerificationUtils.create_log_embed(
+                            "Verification Attempt - Invalid Email",
+                            message,
+                            discord.Color.red(),
+                            [
+                                ("User", f"{ctx.author} ({ctx.author.id})", True),
+                                ("Email", email, True),
+                                ("Reason", message, False)
+                            ]
+                        )
+                    )
                     return await ctx.send("Ungültige E-Mail-Adresse. Bitte verwende deine THU-E-Mail-Adresse.")
             except Exception as e:
                 logger.error(f"Failed to validate email: {e}")
                 return await ctx.send("Es gab einen Fehler bei der E-Mail-Validierung.")
 
             try:
-                # Check if email is already in use
                 is_used, existing_user = await self.storage.is_email_used(email)
                 if is_used:
-                    await self.log_to_channel(VerificationUtils.create_log_embed(
-                        "Verification Attempt - Email In Use",
-                        "Email address is already verified by another user",
-                        discord.Color.red(),
-                        [
-                            ("User", f"{ctx.author} ({ctx.author.id})", True),
-                            ("Email", email, True)
-                        ]
-                    ))
+                    await VerificationUtils.log_to_channel(
+                        self.bot,
+                        VerificationUtils.create_log_embed(
+                            "Verification Attempt - Email In Use",
+                            "Email address is already verified by another user",
+                            discord.Color.red(),
+                            [
+                                ("User", f"{ctx.author} ({ctx.author.id})", True),
+                                ("Email", email, True)
+                            ]
+                        )
+                    )
                     return await ctx.send("Diese E-Mail-Adresse wurde bereits verwendet.")
             except Exception as e:
                 logger.error(f"Failed to check if email is in use: {e}")
@@ -141,13 +130,9 @@ class VerificationCommands:
             verification_code = secrets.token_hex(3).upper()
             
             try:
-                # Add pending verification before sending email
                 self.storage.add_pending_verification(ctx.author.id, email, verification_code)
-                
-                # Send verification email
                 EmailService.send_verification_email(email, verification_code, str(ctx.author))
                 
-                # Create timeout task
                 async def timeout_verification():
                     try:
                         await asyncio.sleep(Config.VERIFICATION_TIMEOUT)
@@ -157,15 +142,18 @@ class VerificationCommands:
                 
                 asyncio.create_task(timeout_verification())
                 
-                await self.log_to_channel(VerificationUtils.create_log_embed(
-                    "Verification Code Sent",
-                    "Verification email sent successfully",
-                    discord.Color.blue(),
-                    [
-                        ("User", f"{ctx.author} ({ctx.author.id})", True),
-                        ("Email", email, True)
-                    ]
-                ))
+                await VerificationUtils.log_to_channel(
+                    self.bot,
+                    VerificationUtils.create_log_embed(
+                        "Verification Code Sent",
+                        "Verification email sent successfully",
+                        discord.Color.blue(),
+                        [
+                            ("User", f"{ctx.author} ({ctx.author.id})", True),
+                            ("Email", email, True)
+                        ]
+                    )
+                )
                 
                 await ctx.send("✅ Verifizierungscode wurde gesendet!\n"
                              "Bitte überprüfe deine Universitäts-E-Mail für den Verifizierungscode.\n"
@@ -191,54 +179,58 @@ class VerificationCommands:
         try:
             verification = self.storage.get_pending_verification(ctx.author.id)
             if not verification:
-                await self.log_to_channel(VerificationUtils.create_log_embed(
-                    "Confirmation Attempt - No Pending Verification",
-                    "User tried to confirm without pending verification",
-                    discord.Color.yellow(),
-                    [("User", f"{ctx.author} ({ctx.author.id})", True)]
-                ))
+                await VerificationUtils.log_to_channel(
+                    self.bot,
+                    VerificationUtils.create_log_embed(
+                        "Confirmation Attempt - No Pending Verification",
+                        "User tried to confirm without pending verification",
+                        discord.Color.yellow(),
+                        [("User", f"{ctx.author} ({ctx.author.id})", True)]
+                    )
+                )
                 return await ctx.send(f"Keine ausstehende Verifizierung. Bitte benutze `{Config.PREFIX}verify <email>` zuerst.")
 
-            # Check for timeout
             if await self.storage.check_verification_timeout(ctx.author.id):
                 await self.storage.remove_verification_timeout(ctx.author.id, expired=True)
                 return await ctx.send(f"Dein Verifizierungscode ist abgelaufen. Bitte benutze `{Config.PREFIX}verify <email>` um einen neuen Code anzufordern.")
 
-            # Check attempts
             if verification['attempts'] >= 3:
-                await self.log_to_channel(VerificationUtils.create_log_embed(
-                    "Verification Failed - Max Attempts",
-                    "User exceeded maximum verification attempts",
-                    discord.Color.red(),
-                    [
-                        ("User", f"{ctx.author} ({ctx.author.id})", True),
-                        ("Email", verification['email'], True)
-                    ]
-                ))
+                await VerificationUtils.log_to_channel(
+                    self.bot,
+                    VerificationUtils.create_log_embed(
+                        "Verification Failed - Max Attempts",
+                        "User exceeded maximum verification attempts",
+                        discord.Color.red(),
+                        [
+                            ("User", f"{ctx.author} ({ctx.author.id})", True),
+                            ("Email", verification['email'], True)
+                        ]
+                    )
+                )
                 del self.storage.pending_verifications[ctx.author.id]
                 return await ctx.send(f"Zu viele Versuche. Bitte starte erneut mit `{Config.PREFIX}verify <email>`")
 
-            # Validate code
             if code.upper() != verification['code']:
                 verification['attempts'] += 1
-                await self.log_to_channel(VerificationUtils.create_log_embed(
-                    "Invalid Verification Code",
-                    f"Attempt {verification['attempts']}/3",
-                    discord.Color.orange(),
-                    [
-                        ("User", f"{ctx.author} ({ctx.author.id})", True),
-                        ("Email", verification['email'], True),
-                        ("Provided Code", code.upper(), True),
-                        ("Expected Code", verification['code'], True)
-                    ]
-                ))
+                await VerificationUtils.log_to_channel(
+                    self.bot,
+                    VerificationUtils.create_log_embed(
+                        "Invalid Verification Code",
+                        f"Attempt {verification['attempts']}/3",
+                        discord.Color.orange(),
+                        [
+                            ("User", f"{ctx.author} ({ctx.author.id})", True),
+                            ("Email", verification['email'], True),
+                            ("Provided Code", code.upper(), True),
+                            ("Expected Code", verification['code'], True)
+                        ]
+                    )
+                )
                 return await ctx.send(f"Ungültiger Code. Noch {3 - verification['attempts']} Versuche übrig.")
 
-            # Save verified user
             email_hash = hashlib.sha256(verification['email'].encode()).hexdigest()
             await self.storage.save_verified_user(ctx.author.id, email_hash)
 
-            # Assign role
             try:
                 guild = ctx.bot.get_guild(Config.GUILD_ID)
                 if guild:
@@ -247,32 +239,41 @@ class VerificationCommands:
                         verified_role = discord.utils.get(guild.roles, name="Verified")
                         if verified_role:
                             await member.add_roles(verified_role)
-                            await self.log_to_channel(VerificationUtils.create_log_embed(
-                                "Verification Successful",
-                                "User verified and role assigned",
-                                discord.Color.green(),
-                                [
-                                    ("User", f"{ctx.author} ({ctx.author.id})", True),
-                                    ("Email", verification['email'], True)
-                                ]
-                            ))
+                            await VerificationUtils.log_to_channel(
+                                self.bot,
+                                VerificationUtils.create_log_embed(
+                                    "Verification Successful",
+                                    "User verified and role assigned",
+                                    discord.Color.green(),
+                                    [
+                                        ("User", f"{ctx.author} ({ctx.author.id})", True),
+                                        ("Email", verification['email'], True)
+                                    ]
+                                )
+                            )
                         else:
-                            await self.log_to_channel(VerificationUtils.create_log_embed(
-                                "Role Assignment Failed",
-                                "Verified role not found",
-                                discord.Color.red(),
-                                [("User", f"{ctx.author} ({ctx.author.id})", True)]
-                            ))
+                            await VerificationUtils.log_to_channel(
+                                self.bot,
+                                VerificationUtils.create_log_embed(
+                                    "Role Assignment Failed",
+                                    "Verified role not found",
+                                    discord.Color.red(),
+                                    [("User", f"{ctx.author} ({ctx.author.id})", True)]
+                                )
+                            )
             except Exception as e:
-                await self.log_to_channel(VerificationUtils.create_log_embed(
-                    "Role Assignment Error",
-                    str(e),
-                    discord.Color.red(),
-                    [
-                        ("User", f"{ctx.author} ({ctx.author.id})", True),
-                        ("Error", str(e), False)
-                    ]
-                ))
+                await VerificationUtils.log_to_channel(
+                    self.bot,
+                    VerificationUtils.create_log_embed(
+                        "Role Assignment Error",
+                        str(e),
+                        discord.Color.red(),
+                        [
+                            ("User", f"{ctx.author} ({ctx.author.id})", True),
+                            ("Error", str(e), False)
+                        ]
+                    )
+                )
 
             del self.storage.pending_verifications[ctx.author.id]
             await ctx.send("E-Mail erfolgreich verifiziert! Dir wurde die Verified-Rolle zugewiesen.")
@@ -291,15 +292,18 @@ class VerificationCommands:
                 if verified_role and verified_role in member.roles:
                     await member.remove_roles(verified_role)
                 
-                await self.log_to_channel(VerificationUtils.create_log_embed(
-                    "Verification Removed",
-                    "Admin removed user verification",
-                    discord.Color.orange(),
-                    [
-                        ("User", f"{member} ({member.id})", True),
-                        ("Admin", f"{ctx.author} ({ctx.author.id})", True)
-                    ]
-                ))
+                await VerificationUtils.log_to_channel(
+                    self.bot,
+                    VerificationUtils.create_log_embed(
+                        "Verification Removed",
+                        "Admin removed user verification",
+                        discord.Color.orange(),
+                        [
+                            ("User", f"{member} ({member.id})", True),
+                            ("Admin", f"{ctx.author} ({ctx.author.id})", True)
+                        ]
+                    )
+                )
                 await ctx.send(f"Verifizierung von {member} wurde entfernt.")
             else:
                 await ctx.send(f"{member} ist nicht verifiziert.")

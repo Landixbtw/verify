@@ -1,9 +1,38 @@
+
 import discord
 from datetime import datetime 
 import re 
+import logging
 from .config import Config
 
+logger = logging.getLogger('email_verification')
+
 class VerificationUtils:
+    _log_channel = None
+
+    @staticmethod
+    async def get_log_channel(bot) -> discord.TextChannel:
+        """Get or retrieve the logging channel"""
+        if VerificationUtils._log_channel is None:
+            for guild in bot.guilds:
+                channel = discord.utils.get(guild.channels, name=Config.LOG_CHANNEL_NAME)
+                if channel:
+                    VerificationUtils._log_channel = channel
+                    break
+        return VerificationUtils._log_channel
+
+    @staticmethod
+    async def log_to_channel(bot, embed: discord.Embed) -> None:
+        """Send a log message to the designated channel"""
+        channel = await VerificationUtils.get_log_channel(bot)
+        if channel is None:
+            logger.error(f"Could not find channel named {Config.LOG_CHANNEL_NAME}")
+            return
+        try:
+            await channel.send(embed=embed)
+        except Exception as e:
+            logger.error(f"Failed to send log message: {e}")
+
     @staticmethod
     def create_log_embed(title: str, description: str, color: discord.Color, fields: list) -> discord.Embed:
         embed = discord.Embed(
@@ -30,3 +59,4 @@ class VerificationUtils:
             return False, "Valid staff email"
 
         return False, "E-Mail-Format ungültig"
+

@@ -1,7 +1,7 @@
 services:
   verify:
-    image: verify  # Bot image named "verify"
-    env_file:
-      - .env  # Load environment variables from .env
+    image: verify 
     restart: unless-stopped
-
+    network_mode: "host"
+    env_file:
+      - .env  

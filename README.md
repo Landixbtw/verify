@@ -19,9 +19,8 @@ this happens with your student email adress.
 #### Normal commands everybody can use
 - \>verify
 - \>help 
-- \>help<commandName>
-- \>confirm<code>
-
+- \>help\<commandName\>
+- \>confirm\<code\>
 #### Admin Commands for use in server
 - \>verify_debug 
 - \>remove_verify

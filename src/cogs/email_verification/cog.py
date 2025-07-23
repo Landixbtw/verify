@@ -12,15 +12,15 @@ class EmailVerification(commands.Cog, name="Email Verification"):
         self.bot = bot
         self.cmd_handler = VerificationCommands(bot)
 
-    @commands.command(name="verify")
+    @commands.command(name="verify", brief="Verifiziere dich mit deiner @thu.de Email-Adresse")
     @commands.dm_only()
     async def verify_email(self, ctx, email: Optional[str] = None):
         """Start email verification process"""
         await self.cmd_handler.verify_email(ctx, email)
 
-    @commands.command(name="confirm")
+    @commands.command(name="confirm", brief="Bestätige Verifizierung mit Code aus Email")
     @commands.dm_only()
-    async def confirm_email(self, ctx, code: str):
+    async def confirm_email(self, ctx, code: Optional[str] = None):
         """Confirm your email with the verification code"""
         await self.cmd_handler.confirm_email(ctx, code)
 

@@ -2,4 +2,5 @@ discord.py==2.4.0
 python-dotenv==1.0.1
 aiohttp==3.10.10
 aiofiles==24.1.0
-mariadb==1.1.10
+audioop-lts==0.2.1
+# mariadb==1.1.10

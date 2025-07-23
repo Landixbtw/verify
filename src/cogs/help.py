@@ -81,5 +81,5 @@ class CustomHelpCommand(commands.HelpCommand):
         await channel.send(embed=embed)
 
 # To use this custom help command, add this to your bot setup:
-def setup(bot):
+async def setup(bot):
     bot.help_command = CustomHelpCommand()

@@ -4,7 +4,6 @@ from dotenv import load_dotenv
 import os
 import logging
 from logging.handlers import RotatingFileHandler
-from help import setup as help_setup
 from cogs.email_verification.config import Config
 
 if not os.path.exists("./Logs"):
@@ -90,7 +89,6 @@ def main():
     try:
         # Initialize and run bot
         bot = Bot()
-        help_setup(bot)
         bot.run(token)
     except discord.errors.LoginFailure as e:
         logger.error(f"Failed to login: {e}")

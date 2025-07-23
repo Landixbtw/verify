@@ -11,6 +11,7 @@ def test_verification_setup():
         'cogs/email_verification/email_service.py',
         'cogs/email_verification/verification_storage.py',
         'cogs/email_verification/utils.py',
+        'cogs/help.py'
     ]
 
     missing_files = []

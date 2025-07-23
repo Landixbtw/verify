@@ -12,7 +12,7 @@ this happens with your student email adress.
 - move every command to its own file. - not really important
 - maybe add logging for: 
     > - normal user tries uses admin only command
-- bot replies twice for command but not for "error". -> \>confirm just gives "error" once
+- bot replies twice for command but not for "error". -> \>confirm just gives "error" once ✅ (somehow 2 instances were up)
 - \> help has no real output, \>confirm - None doesnt really say much
 
 ### Commands
